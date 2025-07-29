@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>OpenSky Flight Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .search-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            min-width: 150px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        #flightInfo {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        }
+
+        .flight-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .flight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .flight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f3f4;
+        }
+
+        .callsign {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .flight-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .detail-item {
+            text-align: center;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            padding: 2rem;
+        }
+
+        .error {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #ff6b6b;
+            border-radius: 12px;
+            padding: 1rem;
+            color: #d63031;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .input-group {
+                flex-direction: column;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .search-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>✈️ OpenSky Flight Tracker</h1>
+
+        <div class="search-container">
+            <div class="input-group">
+                <input type="text" id="icaoInput" placeholder="Enter ICAO24 (e.g., 3c6444)">
+                <input type="text" id="countryInput" placeholder="Or Enter Origin Country (e.g., India)">
+                <button onclick="trackFlights()">Track Flight</button>
+            </div>
+        </div>
+
+        <div id="flightInfo"></div>
+    </div>
+
+    <script>
+        async function trackFlights() {
+            const icao = document.getElementById('icaoInput').value.trim().toLowerCase();
+            const country = document.getElementById('countryInput').value.trim().toLowerCase();
+            const flightInfo = document.getElementById('flightInfo');
+
+            if (!icao && !country) {
+                flightInfo.innerHTML = '<div class="error">Please enter either ICAO24 or country name</div>';
+                return;
+            }
+
+            flightInfo.innerHTML = '<div class="loading">Searching for flights...</div>';
+
+            try {
+                const response = await fetch('https://opensky-network.org/api/states/all');
+                const data = await response.json();
+
+                if (!data.states || data.states.length === 0) {
+                    flightInfo.innerHTML = '<div class="error">No flights found</div>';
+                    return;
+                }
+
+                let flights = data.states;
+
+                if (icao) {
+                    // Search by ICAO24 or callsign (flight number), ignore country if ICAO is provided
+                    flights = flights.filter(flight =>
+                        (flight[0] && flight[0].toLowerCase() === icao) ||
+                        (flight[1] && flight[1].trim().toLowerCase() === icao)
+                    );
+                } else if (country) {
+                    // Only search by country if ICAO is not provided
+                    flights = flights.filter(flight => flight[2] && flight[2].toLowerCase().includes(country));
+                }
+
+                if (flights.length === 0) {
+                    flightInfo.innerHTML = '<div class="error">No matching flights found</div>';
+                    return;
+                }
+
+                displayFlights(flights);
+            } catch (error) {
+                console.error(error);
+                flightInfo.innerHTML = '<div class="error">Error fetching flight data. Please try again.</div>';
+            }
+        }
+
+        function displayFlights(flights) {
+            const flightInfo = document.getElementById('flightInfo');
+
+            const flightCards = flights.map(flight => {
+                const [
+                    icao24, callsign, origin_country, time_position, last_contact,
+                    longitude, latitude, baro_altitude, on_ground, velocity,
+                    true_track, vertical_rate, sensors, geo_altitude,
+                    squawk, spi, position_source
+                ] = flight;
+
+                return `
+        <div class="flight-card">
+          <div class="flight-header">
+            <div class="callsign">${callsign?.trim() || icao24}</div>
+            <div class="status">${on_ground ? 'On Ground' : 'In Flight'}</div>
+          </div>
+          <div class="flight-details">
+            <div class="detail-item">
+              <div class="detail-label">Origin</div>
+              <div class="detail-value">${origin_country || 'Unknown'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Altitude</div>
+              <div class="detail-value">${baro_altitude ? Math.round(baro_altitude) + ' m' : 'N/A'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Speed</div>
+              <div class="detail-value">${velocity ? Math.round(velocity * 3.6) + ' km/h' : 'N/A'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">ICAO24</div>
+              <div class="detail-value">${icao24}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Latitude</div>
+              <div class="detail-value">${latitude ? latitude.toFixed(4) : 'N/A'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Longitude</div>
+              <div class="detail-value">${longitude ? longitude.toFixed(4) : 'N/A'}</div>
+            </div>
+          </div>
+        </div>
+      `;
+            }).join('');
+
+            flightInfo.innerHTML = flightCards;
+        }
+
+        window.onload = function() {
+            const icaoInput = document.getElementById('icaoInput');
+            const countryInput = document.getElementById('countryInput');
+
+            icaoInput.addEventListener('input', function() {
+                if (icaoInput.value.length > 0) {
+                    countryInput.value = '';
+                }
+            });
+
+            countryInput.addEventListener('input', function() {
+                if (countryInput.value.length > 0) {
+                    icaoInput.value = '';
+                }
+            });
+        };
+    </script>
+</body>
+
+</html>
