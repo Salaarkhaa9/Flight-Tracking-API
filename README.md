@@ -1,2 +1,2 @@
 # Flight-Tracking-API
-This is a Flight Tracking system created using OpenSkys Free API
+This is a Real time flight tracking system created using OpenSkys Free API
